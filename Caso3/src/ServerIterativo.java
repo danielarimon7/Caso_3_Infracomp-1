@@ -23,18 +23,18 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-public class ServidorIterativo extends Thread{
+public class ServerIterativo extends Thread{
 
     private final int PUERTO;
     private ArrayList<Integer> idClientes;
-    private HashMap<Integer, Estados> paquetes;
+    private HashMap<Integer, EstadoPaquete> paquetes;
     private int numeroConsultas;
     private final CyclicBarrier barreraMenu;
     private static final String PRIVATE_KEY_FILE = "privateKey.ser";
     private static final String PUBLIC_KEY_FILE = "publicKey.ser";
     private Socket socket;
 
-    public ServidorIterativo(int PUERTO, ArrayList<Integer> idClientes, HashMap<Integer, Estados> paquetes, int numeroConsultas, CyclicBarrier barreraMenu){
+    public ServerIterativo(int PUERTO, ArrayList<Integer> idClientes, HashMap<Integer, EstadoPaquete> paquetes, int numeroConsultas, CyclicBarrier barreraMenu){
         this.PUERTO = PUERTO;
         this.idClientes = idClientes;
         this.paquetes = paquetes;
@@ -248,7 +248,7 @@ public class ServidorIterativo extends Thread{
             }
 
 
-            Estados estadoRespuesta = Estados.DESCONOCIDO;
+            EstadoPaquete estadoRespuesta = EstadoPaquete.DESCONOCIDO;
             try {
                 idClientes.get(Integer.parseInt(new String(UIDDecoded)));
                 estadoRespuesta = paquetes.get(Integer.parseInt(new String(paqueteIdDecoded)));

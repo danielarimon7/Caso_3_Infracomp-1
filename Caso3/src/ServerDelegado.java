@@ -19,16 +19,16 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-public class ServidorDelegado extends Thread {
+public class ServerDelegado extends Thread {
     private ArrayList<Integer> listaClientes;
-    private HashMap<Integer, Estados> mapaPaquetes;
+    private HashMap<Integer, EstadoPaquete> mapaPaquetes;
     private Socket conexionSocket;
 
 
     private static final String ARCHIVO_LLAVE_PRIVADA = "privateKey.ser";
     private static final String ARCHIVO_LLAVE_PUBLICA = "publicKey.ser";
 
-    public ServidorDelegado(ArrayList<Integer> idCliente, HashMap<Integer, Estados> paquetes, Socket socket) {
+    public ServerDelegado(ArrayList<Integer> idCliente, HashMap<Integer, EstadoPaquete> paquetes, Socket socket) {
         this.listaClientes = idCliente;
         this.mapaPaquetes = paquetes;
         this.conexionSocket = socket;
@@ -181,7 +181,7 @@ public class ServidorDelegado extends Thread {
                 escritorSalida.println("OK");
             }
 
-            Estados estado = Estados.DESCONOCIDO;
+            EstadoPaquete estado = EstadoPaquete.DESCONOCIDO;
             try {
                 listaClientes.get(Integer.parseInt(new String(uidDescifrado)));
                 estado = mapaPaquetes.get(Integer.parseInt(new String(idPaqueteDescifrado)));

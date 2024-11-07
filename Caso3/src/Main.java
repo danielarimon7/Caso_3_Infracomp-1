@@ -17,7 +17,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         ArrayList<Integer> clientes = inicializarClientes(32);
-        HashMap<Integer, Estados> paquetes = inicializarPaquetes(clientes);
+        HashMap<Integer, EstadoPaquete> paquetes = inicializarPaquetes(clientes);
 
         boolean ejecutando = true;
         try (Scanner entrada = new Scanner(System.in)) {
@@ -37,15 +37,15 @@ public class Main {
         return clientes;
     }
 
-    private static HashMap<Integer, Estados> inicializarPaquetes(ArrayList<Integer> clientes) {
-        HashMap<Integer, Estados> paquetes = new HashMap<>();
-        HashMap<Integer, Estados> estados = new HashMap<>();
-        estados.put(0, Estados.ENOFICINA);
-        estados.put(1, Estados.RECOGIDO);
-        estados.put(2, Estados.ENCLASIFICACION);
-        estados.put(3, Estados.DESPACHADO);
-        estados.put(4, Estados.ENENTREGA);
-        estados.put(5, Estados.ENTREGADO);
+    private static HashMap<Integer, EstadoPaquete> inicializarPaquetes(ArrayList<Integer> clientes) {
+        HashMap<Integer, EstadoPaquete> paquetes = new HashMap<>();
+        HashMap<Integer, EstadoPaquete> estados = new HashMap<>();
+        estados.put(0, EstadoPaquete.ENOFICINA);
+        estados.put(1, EstadoPaquete.RECOGIDO);
+        estados.put(2, EstadoPaquete.ENCLASIFICACION);
+        estados.put(3, EstadoPaquete.DESPACHADO);
+        estados.put(4, EstadoPaquete.ENENTREGA);
+        estados.put(5, EstadoPaquete.ENTREGADO);
 
         Random aleatorio = new Random();
         for (Integer id : clientes) {
@@ -63,7 +63,7 @@ public class Main {
         System.out.print("Seleccione una opción: ");
     }
 
-    private static boolean ejecutarOpcion(int opcion, ArrayList<Integer> clientes, HashMap<Integer, Estados> paquetes, Scanner entrada) {
+    private static boolean ejecutarOpcion(int opcion, ArrayList<Integer> clientes, HashMap<Integer, EstadoPaquete> paquetes, Scanner entrada) {
         switch (opcion) {
             case 1 -> generarLlaves();
             case 2 -> iniciarServidorConcurrente(clientes, paquetes, entrada);
@@ -98,24 +98,24 @@ public class Main {
         }
     }
 
-    private static void iniciarServidorConcurrente(ArrayList<Integer> clientes, HashMap<Integer, Estados> paquetes, Scanner entrada) {
+    private static void iniciarServidorConcurrente(ArrayList<Integer> clientes, HashMap<Integer, EstadoPaquete> paquetes, Scanner entrada) {
         System.out.print("Número de clientes concurrentes: ");
         int numeroClientes = entrada.nextInt();
         CyclicBarrier barrera = new CyclicBarrier(numeroClientes + 1);
 
-        new ServidorConcurrente(PUERTO, clientes, paquetes, numeroClientes).start();
+        new ServerConcurrente(PUERTO, clientes, paquetes, numeroClientes).start();
         for (int i = 0; i < numeroClientes; i++) {
             new Cliente(1, barrera).start();
         }
         esperarBarrera(barrera);
     }
 
-    private static void iniciarModoIterativo(ArrayList<Integer> clientes, HashMap<Integer, Estados> paquetes, Scanner entrada) {
+    private static void iniciarModoIterativo(ArrayList<Integer> clientes, HashMap<Integer, EstadoPaquete> paquetes, Scanner entrada) {
         System.out.print("Número de consultas: ");
         int numeroConsultas = entrada.nextInt();
         CyclicBarrier barrera = new CyclicBarrier(3);
 
-        new ServidorIterativo(PUERTO, clientes, paquetes, numeroConsultas, barrera).start();
+        new ServerIterativo(PUERTO, clientes, paquetes, numeroConsultas, barrera).start();
         new Cliente(numeroConsultas, barrera).start();
         esperarBarrera(barrera);
     }

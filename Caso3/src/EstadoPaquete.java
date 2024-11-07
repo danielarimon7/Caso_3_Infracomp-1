@@ -1,3 +1,3 @@
-public enum Estados {
+public enum EstadoPaquete {
     ENOFICINA, RECOGIDO, ENCLASIFICACION, DESPACHADO, ENENTREGA, ENTREGADO, DESCONOCIDO
 }
