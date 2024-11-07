@@ -1,13 +1,4 @@
 import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.PrintWriter;
-import java.math.BigInteger;
-import java.net.Socket;
-import java.security.MessageDigest;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.util.ArrayList;
@@ -15,6 +6,16 @@ import java.util.Base64;
 import java.util.HashMap;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -42,7 +43,6 @@ public class ServidorDelegado extends Thread {
             ObjectInputStream lectorLlavePrivada = new ObjectInputStream(new FileInputStream(ARCHIVO_LLAVE_PRIVADA));
             llavePrivada = (PrivateKey) lectorLlavePrivada.readObject();
             System.out.println("Se leyó la llave privada");
-
             ObjectInputStream lectorLlavePublica = new ObjectInputStream(new FileInputStream(ARCHIVO_LLAVE_PUBLICA));
             llavePublica = (PublicKey) lectorLlavePublica.readObject();
             System.out.println("Se leyó la llave pública");
@@ -68,13 +68,11 @@ public class ServidorDelegado extends Thread {
             } else {
                 System.out.println("Servidor autenticado");
             }
-
             ProcessBuilder constructorProceso = new ProcessBuilder("/opt/homebrew/opt/openssl/bin/openssl", "dhparam", "-text", "1024");
             Process proceso = constructorProceso.start();
 
             BufferedReader lectorProceso = new BufferedReader(new InputStreamReader(proceso.getInputStream()));
             BufferedReader lectorErrores = new BufferedReader(new InputStreamReader(proceso.getErrorStream()));
-
             while (lectorErrores.readLine() != null) {}
 
             String linea;

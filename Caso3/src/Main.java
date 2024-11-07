@@ -14,107 +14,119 @@ import java.util.concurrent.CyclicBarrier;
 
 public class Main {
     private static final int PUERTO = 3400;
-    private static final String PUBLIC_KEY_FILE = "publicKey.ser";
-    private static final String PRIVATE_KEY_FILE = "privateKey.ser";
+    private static final String RUTA_LLAVE_PUBLICA = "publicKey.ser";
+    private static final String RUTA_LLAVE_PRIVADA = "privateKey.ser";
 
     public static void main(String[] args) throws IOException {
-        ArrayList<Integer> idClientes = new ArrayList<>();
-        HashMap<Integer, Estados> mapaPaquetes = new HashMap<>();
+        ArrayList<Integer> clientes = inicializarClientes(32);
+        HashMap<Integer, Estados> paquetes = inicializarPaquetes(clientes);
 
-        HashMap<Integer, Estados> estadosDict = new HashMap<>();
-        estadosDict.put(0, Estados.ENOFICINA);
-        estadosDict.put(1, Estados.RECOGIDO);
-        estadosDict.put(2, Estados.ENCLASIFICACION);
-        estadosDict.put(3, Estados.DESPACHADO);
-        estadosDict.put(4, Estados.ENENTREGA);
-        estadosDict.put(5, Estados.ENTREGADO);
-        
-        for (int i = 1; i <= 32; i++) {
-            idClientes.add(i);
-            Random random = new Random();
-            int randomInt = random.nextInt(5);
-            mapaPaquetes.put(i+i, estadosDict.get(randomInt));
-        }
-
-        boolean continuar = true;
-
-        Scanner sc = new Scanner(System.in);
-        
-        while (continuar) {
-
-            System.out.println("Servidor iniciado. Selecciona una opción:");
-            System.out.println("1. Generar pareja de llaves asimétricas");
-            System.out.println("2. Ejecutar y crear delegados concurrentes");
-            System.out.println("3. Servidor y cliente iterativo");
-            System.out.println("4. Salir");
-
-
-            int opcion = sc.nextInt();
-
-            switch (opcion) {
-                case 1 -> generarLlaves();
-                case 2 ->                     {
-                        System.out.println("Ingrese el número de clientes concurrentes");
-                        int numeroClientes = sc.nextInt();
-                        CyclicBarrier barrierMenu = new CyclicBarrier(numeroClientes+1);
-                        ServidorConcurrente servidorPrincipal = new ServidorConcurrente(PUERTO, idClientes, mapaPaquetes, numeroClientes);
-                        servidorPrincipal.start();
-                        for(int i = 0; i < numeroClientes; i++){
-                            Cliente cliente = new Cliente(1, barrierMenu);
-                            cliente.start();
-                        }       try {
-                            barrierMenu.await();
-                            continuar = false;
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (BrokenBarrierException e) {
-                            e.printStackTrace();
-                        }                          }
-                case 3 ->                     {
-                        System.out.println("Ingrese el número de consultas:");
-                        int numeroConsultas = sc.nextInt();
-                        CyclicBarrier barrierMenu = new CyclicBarrier(3);
-                        ServidorIterativo servidor = new ServidorIterativo(PUERTO, idClientes, mapaPaquetes, numeroConsultas, barrierMenu);
-                        servidor.start();
-                        Cliente cliente = new Cliente(numeroConsultas, barrierMenu);
-                        cliente.start();
-                        try {
-                            barrierMenu.await();
-                            continuar = false;
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (BrokenBarrierException e) {
-                            e.printStackTrace();
-                        }                          }
-                case 4 -> continuar = false;
-                default -> System.out.println("Opción no válida, intentelo de nuevo.");
+        boolean ejecutando = true;
+        try (Scanner entrada = new Scanner(System.in)) {
+            while (ejecutando) {
+                mostrarMenu();
+                int opcion = entrada.nextInt();
+                ejecutando = ejecutarOpcion(opcion, clientes, paquetes, entrada);
             }
         }
+    }
 
+    private static ArrayList<Integer> inicializarClientes(int cantidad) {
+        ArrayList<Integer> clientes = new ArrayList<>();
+        for (int i = 1; i <= cantidad; i++) {
+            clientes.add(i);
+        }
+        return clientes;
+    }
+
+    private static HashMap<Integer, Estados> inicializarPaquetes(ArrayList<Integer> clientes) {
+        HashMap<Integer, Estados> paquetes = new HashMap<>();
+        HashMap<Integer, Estados> estados = new HashMap<>();
+        estados.put(0, Estados.ENOFICINA);
+        estados.put(1, Estados.RECOGIDO);
+        estados.put(2, Estados.ENCLASIFICACION);
+        estados.put(3, Estados.DESPACHADO);
+        estados.put(4, Estados.ENENTREGA);
+        estados.put(5, Estados.ENTREGADO);
+
+        Random aleatorio = new Random();
+        for (Integer id : clientes) {
+            paquetes.put(id + id, estados.get(aleatorio.nextInt(5)));
+        }
+        return paquetes;
+    }
+
+    private static void mostrarMenu() {
+        System.out.println("======== MENÚ ========");
+        System.out.println("1. Generar llaves RSA");
+        System.out.println("2. Iniciar servidor concurrente");
+        System.out.println("3. Ejecutar modo iterativo de servidor y cliente");
+        System.out.println("4. Salir");
+        System.out.print("Seleccione una opción: ");
+    }
+
+    private static boolean ejecutarOpcion(int opcion, ArrayList<Integer> clientes, HashMap<Integer, Estados> paquetes, Scanner entrada) {
+        switch (opcion) {
+            case 1 -> generarLlaves();
+            case 2 -> iniciarServidorConcurrente(clientes, paquetes, entrada);
+            case 3 -> iniciarModoIterativo(clientes, paquetes, entrada);
+            case 4 -> {
+                System.out.println("Saliendo del programa...");
+                return false;
+            }
+            default -> System.out.println("Opción inválida, intente de nuevo.");
+        }
+        return true;
     }
 
     private static void generarLlaves() {
         try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            keyGen.initialize(1024);
-            KeyPair keyPair = keyGen.generateKeyPair();
-
-            PublicKey publicKey = keyPair.getPublic();
-            PrivateKey privateKey = keyPair.getPrivate();
-
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(PUBLIC_KEY_FILE))) {
-                oos.writeObject(publicKey);
-            }
-            System.out.println("Llave pública guardada correctamente");
-
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(PRIVATE_KEY_FILE))) {
-                oos.writeObject(privateKey);
-            }
-            System.out.println("Llave privada guardada correctamente");
-            
+            KeyPairGenerator generadorLlaves = KeyPairGenerator.getInstance("RSA");
+            generadorLlaves.initialize(1024);
+            KeyPair parLlaves = generadorLlaves.generateKeyPair();
+            guardarLlave(parLlaves.getPublic(), RUTA_LLAVE_PUBLICA, "Llave pública generada y guardada.");
+            guardarLlave(parLlaves.getPrivate(), RUTA_LLAVE_PRIVADA, "Llave privada generada y guardada.");
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error al generar llaves: " + e.getMessage());
         }
     }
 
+    private static void guardarLlave(Object llave, String ruta, String mensajeExito) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(ruta))) {
+            oos.writeObject(llave);
+            System.out.println(mensajeExito + " Archivo: " + ruta);
+        } catch (IOException e) {
+            System.err.println("Error al guardar la llave en " + ruta + ": " + e.getMessage());
+        }
+    }
+
+    private static void iniciarServidorConcurrente(ArrayList<Integer> clientes, HashMap<Integer, Estados> paquetes, Scanner entrada) {
+        System.out.print("Número de clientes concurrentes: ");
+        int numeroClientes = entrada.nextInt();
+        CyclicBarrier barrera = new CyclicBarrier(numeroClientes + 1);
+
+        new ServidorConcurrente(PUERTO, clientes, paquetes, numeroClientes).start();
+        for (int i = 0; i < numeroClientes; i++) {
+            new Cliente(1, barrera).start();
+        }
+        esperarBarrera(barrera);
+    }
+
+    private static void iniciarModoIterativo(ArrayList<Integer> clientes, HashMap<Integer, Estados> paquetes, Scanner entrada) {
+        System.out.print("Número de consultas: ");
+        int numeroConsultas = entrada.nextInt();
+        CyclicBarrier barrera = new CyclicBarrier(3);
+
+        new ServidorIterativo(PUERTO, clientes, paquetes, numeroConsultas, barrera).start();
+        new Cliente(numeroConsultas, barrera).start();
+        esperarBarrera(barrera);
+    }
+
+    private static void esperarBarrera(CyclicBarrier barrera) {
+        try {
+            barrera.await();
+        } catch (InterruptedException | BrokenBarrierException e) {
+            System.err.println("Error en la sincronización: " + e.getMessage());
+        }
+    }
 }

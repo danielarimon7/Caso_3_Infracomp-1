@@ -26,7 +26,7 @@ public class Cliente extends Thread{
     public static final int PUERTO = 3400;
 	public static final String SERVIDOR = "localhost";
     public static final String PUBLIC_KEY_FILE = "publicKey.ser";
-    private static final String CARACTERES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final String CARACTERES = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom random = new SecureRandom();
     private int numeroConsultas;
     private final CyclicBarrier barreraMenu;
