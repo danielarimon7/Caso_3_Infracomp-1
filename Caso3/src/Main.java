@@ -57,7 +57,7 @@ public class Main {
                         System.out.println("Ingrese el número de clientes concurrentes");
                         int numeroClientes = sc.nextInt();
                         CyclicBarrier barrierMenu = new CyclicBarrier(numeroClientes+1);
-                        ServidorConcurrente servidorPrincipal = new ServidorConcurrente(PUERTO, idClientes, mapaPaquetes, numeroClientes, barrierMenu);
+                        ServidorConcurrente servidorPrincipal = new ServidorConcurrente(PUERTO, idClientes, mapaPaquetes, numeroClientes);
                         servidorPrincipal.start();
                         for(int i = 0; i < numeroClientes; i++){
                             Cliente cliente = new Cliente(1, barrierMenu);

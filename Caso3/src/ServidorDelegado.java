@@ -13,259 +13,224 @@ import java.security.Signature;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.concurrent.CyclicBarrier;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-
 public class ServidorDelegado extends Thread {
-    private static final String PRIVATE_KEY_FILE = "privateKey.ser";
-    private static final String PUBLIC_KEY_FILE = "publicKey.ser";
-    private ArrayList<Integer> idClientes;
-    private HashMap<Integer, Estados> paquetes;
-    private final CyclicBarrier barrierServidor;
-    private Socket socket;
+    private ArrayList<Integer> listaClientes;
+    private HashMap<Integer, Estados> mapaPaquetes;
+    private Socket conexionSocket;
 
-    public ServidorDelegado(ArrayList<Integer> idCliente, HashMap<Integer, Estados> paquetes, Socket socket, CyclicBarrier barrierServidor) {
-        this.idClientes = idCliente;
-        this.paquetes = paquetes;
-        this.socket = socket;
-        this.barrierServidor = barrierServidor;
+
+    private static final String ARCHIVO_LLAVE_PRIVADA = "privateKey.ser";
+    private static final String ARCHIVO_LLAVE_PUBLICA = "publicKey.ser";
+
+    public ServidorDelegado(ArrayList<Integer> idCliente, HashMap<Integer, Estados> paquetes, Socket socket) {
+        this.listaClientes = idCliente;
+        this.mapaPaquetes = paquetes;
+        this.conexionSocket = socket;
     }
 
     public void run() {
+        PrivateKey llavePrivada = null;
+        PublicKey llavePublica = null;
 
-        PrivateKey privateKey = null;
-        PublicKey publicKey = null;
-        
         try {
-            // Leer las llaves
-            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(PRIVATE_KEY_FILE));
-            privateKey = (PrivateKey) ois.readObject();
-            System.out.println("Llave privada leída exitosamente.");
-            ObjectInputStream ois2 = new ObjectInputStream(new FileInputStream(PUBLIC_KEY_FILE));
-            publicKey = (PublicKey) ois2.readObject();
-            System.out.println("Llave pública leída exitosamente.");
+            ObjectInputStream lectorLlavePrivada = new ObjectInputStream(new FileInputStream(ARCHIVO_LLAVE_PRIVADA));
+            llavePrivada = (PrivateKey) lectorLlavePrivada.readObject();
+            System.out.println("Se leyó la llave privada");
 
-            
+            ObjectInputStream lectorLlavePublica = new ObjectInputStream(new FileInputStream(ARCHIVO_LLAVE_PUBLICA));
+            llavePublica = (PublicKey) lectorLlavePublica.readObject();
+            System.out.println("Se leyó la llave pública");
 
-            BufferedReader lector = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter escritor = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader lectorEntrada = new BufferedReader(new InputStreamReader(conexionSocket.getInputStream()));
+            PrintWriter escritorSalida = new PrintWriter(conexionSocket.getOutputStream(), true);
+            System.out.println(lectorEntrada.readLine());
 
-            System.out.println(lector.readLine());
+            Cipher cifrador = Cipher.getInstance("RSA");
+            cifrador.init(Cipher.DECRYPT_MODE, llavePrivada);
+            String mensajeRecibido = lectorEntrada.readLine();
+            byte[] mensajeDecodificado = Base64.getDecoder().decode(mensajeRecibido);
+            byte[] bytesMensaje = cifrador.doFinal(mensajeDecodificado);
+            String mensajeDesencriptado = new String(bytesMensaje);
+            escritorSalida.println(mensajeDesencriptado);
 
-
-            Cipher cipher = Cipher.getInstance("RSA");
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            String receivedMessage = lector.readLine();
-            byte[] decodedMessage = Base64.getDecoder().decode(receivedMessage);
-            byte[] mensajeBytes = cipher.doFinal(decodedMessage);
-            String mensajeDesencriptado = new String(mensajeBytes);
-            escritor.println(mensajeDesencriptado);
-
-
-
-            if(lector.readLine().equals("OK")){
+            if (lectorEntrada.readLine().equals("OK") == false) {
+                System.out.println("Error, no se autenticó el servidor");
+                System.out.println("Fin de la conexión");
+                lectorLlavePrivada.close();
+                lectorLlavePublica.close();
+                throw new Exception("Error, no se autenticó el servidor");
+            } else {
                 System.out.println("Servidor autenticado");
-            }else{
-                System.out.println("Error en la autenticación");
-                System.out.println("Conexión terminada");
-                ois.close();
-                ois2.close();
-                throw new Exception("Error en la autenticación");
             }
-            ProcessBuilder processBuilder = new ProcessBuilder("Caso3\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
-            Process process = processBuilder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            while (errorReader.readLine() != null) {
-            }
-            String line;
-            StringBuilder hexPrime = new StringBuilder();
-            BigInteger primeNumber = null;
-            int generatorNumber=0;
 
-            boolean readingPrime = false;
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("prime:")) {
-                    // Comienza a leer el número primo
-                    readingPrime = true;
-                } else if (line.contains("generator:")) {
-                    // Fin del número primo, inicio del generador
-                    readingPrime = false;
-                    String[] parts = line.split(" ");
-                    generatorNumber = Integer.parseInt(parts[9]); // Generador en decimal
-                } else if (readingPrime) {
-                    // Extraer el valor en hexadecimal
-                    hexPrime.append(line.trim().replace(":", ""));
+            ProcessBuilder constructorProceso = new ProcessBuilder("/opt/homebrew/opt/openssl/bin/openssl", "dhparam", "-text", "1024");
+            Process proceso = constructorProceso.start();
+
+            BufferedReader lectorProceso = new BufferedReader(new InputStreamReader(proceso.getInputStream()));
+            BufferedReader lectorErrores = new BufferedReader(new InputStreamReader(proceso.getErrorStream()));
+
+            while (lectorErrores.readLine() != null) {}
+
+            String linea;
+            StringBuilder numeroPrimoHex = new StringBuilder();
+            BigInteger numeroPrimo = null;
+            int numeroGenerador = 0;
+            boolean leyendoPrimo = false;
+
+            while ((linea = lectorProceso.readLine()) != null) {
+                if (linea.contains("prime:")) {
+                    leyendoPrimo = true;
+                } else if (linea.contains("generator:")) {
+                    leyendoPrimo = false;
+                    String[] partes = linea.split(" ");
+                    numeroGenerador = Integer.parseInt(partes[9]);
+                } else if (leyendoPrimo) {
+                    numeroPrimoHex.append(linea.trim().replace(":", ""));
                 }
             }
 
-            // Convertir el número primo en hexadecimal a BigInteger
-            primeNumber = new BigInteger(hexPrime.toString(), 16);
+            numeroPrimo = new BigInteger(numeroPrimoHex.toString(), 16);
             long x = Math.round(Math.random());
+            int generadorNumeroX = (int) Math.pow(numeroGenerador, x);
 
-            int generatorNumberX = (int) Math.pow(generatorNumber, x);
+            escritorSalida.println(numeroGenerador);
+            escritorSalida.println(numeroPrimo.toString());
+            escritorSalida.println(generadorNumeroX);
 
-            escritor.println(generatorNumber);
-            escritor.println(primeNumber.toString());
-            escritor.println(generatorNumberX);
-            
-            BigInteger firmar = BigInteger.valueOf(generatorNumber)
-                .add(BigInteger.valueOf(generatorNumberX))
-                .add(primeNumber);
+            BigInteger valorFirmado = BigInteger.valueOf(numeroGenerador)
+                .add(BigInteger.valueOf(generadorNumeroX))
+                .add(numeroPrimo);
 
-            Signature signature = Signature.getInstance("SHA1withRSA");
-            signature.initSign(privateKey);
+            Signature firmador = Signature.getInstance("SHA1withRSA");
+            firmador.initSign(llavePrivada);
 
-            byte[] datos_firma = firmar.toByteArray();
-            signature.update(datos_firma);
+            byte[] datosFirma = valorFirmado.toByteArray();
+            firmador.update(datosFirma);
+            byte[] bytesFirma = firmador.sign();
+            String firmaCodificada = Base64.getEncoder().encodeToString(bytesFirma);
+            escritorSalida.println(firmaCodificada);
 
-            byte[] firmaBytes = signature.sign();
-            String firmaBase64 = Base64.getEncoder().encodeToString(firmaBytes);
-
-            // Enviar la firma en Base64
-            escritor.println(firmaBase64);
-
-            if (lector.readLine().equals("OK")) {
-                System.out.println("Firma correcta");
-            } else {
-                System.out.println("Firma no correcta");
+            if (lectorEntrada.readLine().equals("OK") == false) {
+                System.out.println("Firma no válida");
                 System.out.println("Conexión terminada");
-                ois.close();
-                ois2.close();
+                lectorLlavePrivada.close();
+                lectorLlavePublica.close();
                 return;
+            } else {
+                System.out.println("Firma correcta");
             }
 
-            int Y= Integer.parseInt(lector.readLine());
+            int Y = Integer.parseInt(lectorEntrada.readLine());
+            int generadorNumeroXY = (int) Math.pow(Y, x);
+            BigInteger claveMaestra = BigInteger.valueOf(generadorNumeroXY).mod(numeroPrimo);
 
-            int generatorNumberXY= (int)Math.pow(Y, x);
-
-            BigInteger masterkey = BigInteger.valueOf(generatorNumberXY).mod(primeNumber);
-
-            SecureRandom random = new SecureRandom();
+            SecureRandom generadorAleatorio = new SecureRandom();
             byte[] ivBytes = new byte[16];
-            random.nextBytes(ivBytes);
+            generadorAleatorio.nextBytes(ivBytes);
 
-            escritor.println(Base64.getEncoder().encodeToString(ivBytes));
+            escritorSalida.println(Base64.getEncoder().encodeToString(ivBytes));
 
             IvParameterSpec iv = new IvParameterSpec(ivBytes);
+            MessageDigest digestorSha512 = MessageDigest.getInstance("SHA-512");
 
-            MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
+            byte[] hashClave = digestorSha512.digest(claveMaestra.toByteArray());
+            byte[] claveAES = new byte[32];
+            byte[] claveHmac = new byte[32];
+            System.arraycopy(hashClave, 0, claveAES, 0, 32);
+            System.arraycopy(hashClave, 32, claveHmac, 0, 32);
 
-            byte[] hash = sha512.digest(masterkey.toByteArray());
-
-            byte[] key1 = new byte[32];
-            byte[] key2 = new byte[32];
-
-            System.arraycopy(hash, 0, key1, 0, 32);
-            System.arraycopy(hash, 32, key2, 0, 32);
-
-            SecretKey K_AB1 = new SecretKeySpec(key1, "AES");
-            SecretKey K_AB2 = new SecretKeySpec(key2, "HmacSHA384");
+            SecretKey K_AES = new SecretKeySpec(claveAES, "AES");
+            SecretKey K_HMAC = new SecretKeySpec(claveHmac, "HmacSHA384");
             System.out.println("Llaves simétricas generadas exitosamente.");
 
-            String uid = lector.readLine();
-            String hmac_uid = lector.readLine();
+            String uid = lectorEntrada.readLine();
+            String hmacUid = lectorEntrada.readLine();
 
-            // Verificar HMAC del usuario
-            byte[] uidDecoded64 = Base64.getDecoder().decode(uid);
-            Cipher cipherSimetricaUID = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cipherSimetricaUID.init(Cipher.DECRYPT_MODE, K_AB1, iv);
-            byte[] UIDDecoded=cipherSimetricaUID.doFinal(uidDecoded64);
-            Mac mac = Mac.getInstance("HmacSHA384");
-            mac.init(K_AB2);
-            byte[] computedHmacUid = mac.doFinal(UIDDecoded);
-            String computedHmacUidBase64 = Base64.getEncoder().encodeToString(computedHmacUid);
+            byte[] uidDecodificado64 = Base64.getDecoder().decode(uid);
+            Cipher cifradorSimetricoUID = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cifradorSimetricoUID.init(Cipher.DECRYPT_MODE, K_AES, iv);
+            byte[] uidDescifrado = cifradorSimetricoUID.doFinal(uidDecodificado64);
 
-            String paquete_id = lector.readLine();
-            String hmac_paquete = lector.readLine();
+            Mac calculadorMac = Mac.getInstance("HmacSHA384");
+            calculadorMac.init(K_HMAC);
+            byte[] hmacUidCalculado = calculadorMac.doFinal(uidDescifrado);
+            String hmacUidCalculadoBase64 = Base64.getEncoder().encodeToString(hmacUidCalculado);
 
-            // Verificar HMAC del paquete
-            byte[] paqueteIdDecoded64 = Base64.getDecoder().decode(paquete_id);
-            Cipher cipherSimetrica = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cipherSimetrica.init(Cipher.DECRYPT_MODE, K_AB1, iv);
-            byte[] paqueteIdDecoded=cipherSimetrica.doFinal(paqueteIdDecoded64);
-            mac.init(K_AB2);
-            byte[] computedHmacPaquete = mac.doFinal(paqueteIdDecoded);
-            String computedHmacPaqueteBase64 = Base64.getEncoder().encodeToString(computedHmacPaquete);
+            String idPaquete = lectorEntrada.readLine();
+            String hmacPaquete = lectorEntrada.readLine();
 
-            if (!computedHmacPaqueteBase64.equals(hmac_paquete) || !computedHmacUidBase64.equals(hmac_uid)) {
-                escritor.println("ERROR EN LA CONSULTA");
+            byte[] idPaqueteDecodificado64 = Base64.getDecoder().decode(idPaquete);
+            Cipher cifradorSimetricoPaquete = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cifradorSimetricoPaquete.init(Cipher.DECRYPT_MODE, K_AES, iv);
+            byte[] idPaqueteDescifrado = cifradorSimetricoPaquete.doFinal(idPaqueteDecodificado64);
+
+            calculadorMac.init(K_HMAC);
+            byte[] hmacPaqueteCalculado = calculadorMac.doFinal(idPaqueteDescifrado);
+            String hmacPaqueteCalculadoBase64 = Base64.getEncoder().encodeToString(hmacPaqueteCalculado);
+
+            if (!hmacPaqueteCalculadoBase64.equals(hmacPaquete) || !hmacUidCalculadoBase64.equals(hmacUid)) {
+                escritorSalida.println("ERROR EN LA CONSULTA");
                 System.out.println("Conexión terminada");
-                ois.close();
-                ois2.close();
+                lectorLlavePrivada.close();
+                lectorLlavePublica.close();
                 return;
-            }else{
-                escritor.println("OK");
+            } else {
+                escritorSalida.println("OK");
             }
 
-            // Verificar si el paquete y el cliente existen
-            //TODO Si algo verificar que estén relaciones y que sea menor a 32 
-            Estados estadoRespuesta = Estados.DESCONOCIDO;
+            Estados estado = Estados.DESCONOCIDO;
             try {
-                idClientes.get(Integer.parseInt(new String(UIDDecoded)));
-                estadoRespuesta = paquetes.get(Integer.parseInt(new String(paqueteIdDecoded)));
+                listaClientes.get(Integer.parseInt(new String(uidDescifrado)));
+                estado = mapaPaquetes.get(Integer.parseInt(new String(idPaqueteDescifrado)));
             } catch (Exception e) {
                 System.out.println("Paquete o cliente no encontrado");
             }
 
-            // Cifrar y enviar el estado del paquete
-            cipherSimetrica.init(Cipher.ENCRYPT_MODE, K_AB1, iv);
-            String estadoRespuestaCifrado = Base64.getEncoder().encodeToString(cipherSimetrica.doFinal(estadoRespuesta.toString().getBytes()));
-            mac.init(K_AB2);
-            byte[] hmacEstadoRespuesta = mac.doFinal(estadoRespuesta.toString().getBytes());
-            String hmacEstadoRespuestaBase64 = Base64.getEncoder().encodeToString(hmacEstadoRespuesta);
+            cifradorSimetricoPaquete.init(Cipher.ENCRYPT_MODE, K_AES, iv);
+            String estadoCifrado = Base64.getEncoder().encodeToString(cifradorSimetricoPaquete.doFinal(estado.toString().getBytes()));
 
-            escritor.println(estadoRespuestaCifrado);
-            escritor.println(hmacEstadoRespuestaBase64);
+            calculadorMac.init(K_HMAC);
+            byte[] hmacEstado = calculadorMac.doFinal(estado.toString().getBytes());
+            String hmacEstadoCodificado = Base64.getEncoder().encodeToString(hmacEstado);
 
-            if (lector.readLine().equals("ERROR")) {
+            escritorSalida.println(estadoCifrado);
+            escritorSalida.println(hmacEstadoCodificado);
+
+            if (lectorEntrada.readLine().equals("ERROR")) {
                 System.out.println("Error en la consulta");
-                ois.close();
-                ois2.close();
+                lectorLlavePrivada.close();
+                lectorLlavePublica.close();
                 return;
             }
 
-            // Terminar la conexión
-            if (lector.readLine().equals("TERMINAR")){
+            if (lectorEntrada.readLine().equals("TERMINAR")) {
                 System.out.println("Conexión terminada");
             }
 
-            // Cerrar los flujos y el socket
-            reader.close();
-            process.waitFor();
-            process.destroy();
-            socket.close();
-            ois.close();
-            ois2.close();
-            escritor.close();
-            lector.close();
+            lectorProceso.close();
+            proceso.waitFor();
+            proceso.destroy();
+            conexionSocket.close();
+            lectorLlavePrivada.close();
+            lectorLlavePublica.close();
+            escritorSalida.close();
+            lectorEntrada.close();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        //Barrera para esperar a los delegados
-        //try {
-        //    barrierServidor.await();
-        //} catch (InterruptedException e) {
-            
-        //    e.printStackTrace();
-        //} catch (BrokenBarrierException e) {
-            
-        //    e.printStackTrace();
-        //}
     }
-    // Método para firmar un mensaje
-    public static byte[] signData(byte[] data, PrivateKey privateKey) throws Exception {
-        Signature signature = Signature.getInstance("SHA1withRSA");
-        signature.initSign(privateKey);
-        signature.update(data);
-        return signature.sign();
+
+    public static byte[] firmarDatos(byte[] datos, PrivateKey llavePrivada) throws Exception {
+        Signature firmador = Signature.getInstance("SHA1withRSA");
+        firmador.initSign(llavePrivada);
+        firmador.update(datos);
+        return firmador.sign();
     }
 }
-
-// Comentarios adicionales: se usó base64 con el fin de que no se alteraran los bits al momento de enviarlos por la red.

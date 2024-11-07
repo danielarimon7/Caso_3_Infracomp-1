@@ -5,50 +5,44 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.CyclicBarrier;
 
-public class ServidorConcurrente extends Thread{
+public class ServidorConcurrente extends Thread {
 
-    private final int PUERTO;
-    private ArrayList<Integer> idClientes;
-    private HashMap<Integer, Estados> paquetes;
-    private int numeroClientes;
-    private final CyclicBarrier barreraMenu;
-    private CyclicBarrier barrierServidor;
+    private final int puerto;
+    private ArrayList<Integer> listaClientes;
+    private HashMap<Integer, Estados> mapaPaquetes;
+    private int totalClientes;
 
-    public ServidorConcurrente(int PUERTO, ArrayList<Integer> idClientes, HashMap<Integer, Estados> paquetes, int numeroClientes, CyclicBarrier barreraMenu){
-        this.PUERTO = PUERTO;
-        this.idClientes = idClientes;
-        this.paquetes = paquetes;
-        this.numeroClientes = numeroClientes;
-        this.barreraMenu = barreraMenu;
+    public ServidorConcurrente(int puerto, ArrayList<Integer> listaClientes, HashMap<Integer, Estados> mapaPaquetes, int totalClientes) {
+        this.puerto = puerto;
+        this.listaClientes = listaClientes;
+        this.mapaPaquetes = mapaPaquetes;
+        this.totalClientes = totalClientes;
+
     }
 
-
     public void run() {
-        ServerSocket ss = null;
+        ServerSocket servidorSocket = null;
         try {
-            ss = new ServerSocket(PUERTO);
-            System.out.println("Servidor escuchando en el puerto " + PUERTO);
+            servidorSocket = new ServerSocket(puerto);
+            System.out.println("Puerto Servidor:" + puerto);
 
-            barrierServidor = new CyclicBarrier(numeroClientes+1);
-            for(int i = 0; i < numeroClientes; i++) {
-                Socket socket = ss.accept();
-                ServidorDelegado servidor = new ServidorDelegado(idClientes, paquetes, socket, barrierServidor);
-                System.out.println("Servidor concurrente " + (i+1 ));
-                servidor.start();
+            for (int contador = 0; contador < totalClientes; contador++) {
+                Socket conexionCliente = servidorSocket.accept();
+                ServidorDelegado delegadoServidor = new ServidorDelegado(listaClientes, mapaPaquetes, conexionCliente);
+                System.out.println("Servidor concurrente " + (contador + 1));
+                delegadoServidor.start();
             }
 
-            
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         } finally {
-            if (ss != null)
+            if (servidorSocket != null) {
                 try {
-                    ss.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    servidorSocket.close();
+                } catch (IOException excepcionCierre) {
+                    excepcionCierre.printStackTrace();
                 }
+            }
         }
-
-   
     }
 }
