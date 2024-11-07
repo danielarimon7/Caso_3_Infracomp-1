@@ -33,6 +33,7 @@ public class ServidorConcurrente extends Thread{
             for(int i = 0; i < numeroClientes; i++) {
                 Socket socket = ss.accept();
                 ServidorDelegado servidor = new ServidorDelegado(idClientes, paquetes, socket, barrierServidor);
+                System.out.println("Servidor concurrente " + (i+1 ));
                 servidor.start();
             }
 
@@ -48,26 +49,6 @@ public class ServidorConcurrente extends Thread{
                 }
         }
 
-        // //Barrera para esperar a los delegados
-        // try {
-        //     barrierServidor.await();
-        // } catch (InterruptedException e) {
-            
-        //     e.printStackTrace();
-        // } catch (BrokenBarrierException e) {
-            
-        //     e.printStackTrace();
-        // }
-
-        // //Barrera para que no se muestre el menú de opciones hasta que todos terminen
-        // try {
-        //     barreraMenu.await();
-        // } catch (InterruptedException e) {
-            
-        //     e.printStackTrace();
-        // } catch (BrokenBarrierException e) {
-            
-        //     e.printStackTrace();
-        // }
+   
     }
 }

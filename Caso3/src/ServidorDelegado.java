@@ -77,7 +77,7 @@ public class ServidorDelegado extends Thread {
                 ois2.close();
                 throw new Exception("Error en la autenticación");
             }
-            ProcessBuilder processBuilder = new ProcessBuilder("Caso3_infracomp-main\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
+            ProcessBuilder processBuilder = new ProcessBuilder("Caso3\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
             Process process = processBuilder.start();
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));

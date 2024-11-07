@@ -1,18 +1,11 @@
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-
-
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.math.BigInteger;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
@@ -24,7 +17,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
-
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
@@ -119,8 +111,7 @@ public class ServidorIterativo extends Thread{
             String mensajeDesencriptado = new String(mensajeBytes);
             escritor.println(mensajeDesencriptado);
 
-            //TODO no tienes qeu autenticar aquí al cliente
-            // Autenticar al cliente
+
             if(lector.readLine().equals("OK")){
                 System.out.println("Servidor autenticado");
             }else{
@@ -130,14 +121,12 @@ public class ServidorIterativo extends Thread{
                 ois2.close();
                 throw new Exception("Error en la autenticación");
             }
-            ProcessBuilder processBuilder = new ProcessBuilder("lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
+            ProcessBuilder processBuilder = new ProcessBuilder("Caso3\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
             Process process = processBuilder.start();
             // Leer la salida del commando
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            // Read and discard the lines from errorReader to avoid printing to console
             while (errorReader.readLine() != null) {
-                // Do nothing
             }
             String line;
             StringBuilder hexPrime = new StringBuilder();
@@ -147,13 +136,11 @@ public class ServidorIterativo extends Thread{
             boolean readingPrime = false;
             while ((line = reader.readLine()) != null) {
                 if (line.contains("prime:")) {
-                    // Comienza a leer el número primo
                     readingPrime = true;
                 } else if (line.contains("generator:")) {
-                    // Fin del número primo, inicio del generador
                     readingPrime = false;
                     String[] parts = line.split(" ");
-                    generatorNumber = Integer.parseInt(parts[9]); // Generador en decimal
+                    generatorNumber = Integer.parseInt(parts[9]); 
                 } else if (readingPrime) {
                     // Extraer el valor en hexadecimal
                     hexPrime.append(line.trim().replace(":", ""));
@@ -259,8 +246,7 @@ public class ServidorIterativo extends Thread{
                 escritor.println("OK");
             }
 
-            // Verificar si el paquete y el cliente existen
-            //TODO Si algo verificar que estén relaciones y que sea menor a 32 
+
             Estados estadoRespuesta = Estados.DESCONOCIDO;
             try {
                 idClientes.get(Integer.parseInt(new String(UIDDecoded)));
@@ -269,7 +255,7 @@ public class ServidorIterativo extends Thread{
                 System.out.println("Paquete o cliente no encontrado");
             }
 
-            // Cifrar y enviar el estado del paquete
+
             cipherSimetrica.init(Cipher.ENCRYPT_MODE, K_AB1, iv);
             String estadoRespuestaCifrado = Base64.getEncoder().encodeToString(cipherSimetrica.doFinal(estadoRespuesta.toString().getBytes()));
             mac.init(K_AB2);
@@ -291,7 +277,7 @@ public class ServidorIterativo extends Thread{
                 System.out.println("Conexión terminada");
             }
 
-            // Cerrar los flujos y el socket
+
             reader.close();
             process.waitFor();
             process.destroy();
