@@ -121,7 +121,7 @@ public class ServidorIterativo extends Thread{
                 ois2.close();
                 throw new Exception("Error en la autenticación");
             }
-            ProcessBuilder processBuilder = new ProcessBuilder("/opt/homebrew/opt/openssl/bin/openssl", "dhparam", "-text", "1024");
+            ProcessBuilder processBuilder = new ProcessBuilder("Caso3\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
 
             Process process = processBuilder.start();
             // Leer la salida del commando

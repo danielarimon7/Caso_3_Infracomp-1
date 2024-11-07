@@ -3,8 +3,6 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
@@ -57,7 +55,7 @@ public class Main {
     }
 
     private static void mostrarMenu() {
-        System.out.println("======== MENÚ ========");
+        System.out.println("======== MENU ========");
         System.out.println("1. Generar llaves RSA");
         System.out.println("2. Iniciar servidor concurrente");
         System.out.println("3. Ejecutar modo iterativo de servidor y cliente");

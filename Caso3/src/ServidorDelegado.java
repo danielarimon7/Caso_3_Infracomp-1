@@ -1,4 +1,13 @@
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.util.ArrayList;
@@ -6,16 +15,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-
-import java.io.PrintWriter;
-import java.math.BigInteger;
-import java.net.Socket;
-import java.security.MessageDigest;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -68,7 +67,7 @@ public class ServidorDelegado extends Thread {
             } else {
                 System.out.println("Servidor autenticado");
             }
-            ProcessBuilder constructorProceso = new ProcessBuilder("/opt/homebrew/opt/openssl/bin/openssl", "dhparam", "-text", "1024");
+            ProcessBuilder constructorProceso = new ProcessBuilder("Caso3\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
             Process proceso = constructorProceso.start();
 
             BufferedReader lectorProceso = new BufferedReader(new InputStreamReader(proceso.getInputStream()));
