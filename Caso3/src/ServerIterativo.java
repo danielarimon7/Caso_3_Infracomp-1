@@ -49,7 +49,7 @@ public class ServerIterativo extends Thread{
             ss = new ServerSocket(PUERTO);
             System.out.println("Servidor escuchando en el puerto " + PUERTO);
 
-            // Esperar conexiones y crear delegados
+
             while (numeroConsultas>0) {
                 socket = ss.accept();
                 protocoloServidor();
@@ -70,7 +70,7 @@ public class ServerIterativo extends Thread{
         }
 
 
-        //Barrera para que no se muestre el menú de opciones hasta que todos terminen
+
         try {
             barreraMenu.await();
         } catch (InterruptedException e) {
@@ -88,7 +88,7 @@ public class ServerIterativo extends Thread{
         PublicKey publicKey = null;
         
         try {
-            // Leer las llaves
+
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(PRIVATE_KEY_FILE));
             privateKey = (PrivateKey) ois.readObject();
             System.out.println("Llave privada leída exitosamente.");
@@ -102,7 +102,7 @@ public class ServerIterativo extends Thread{
 
             System.out.println(lector.readLine());
 
-            // Recibir el mensaje cifrado, desencriptarlo y enviarlo de vuelta
+
             Cipher cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
             String receivedMessage = lector.readLine();
@@ -124,7 +124,7 @@ public class ServerIterativo extends Thread{
             ProcessBuilder processBuilder = new ProcessBuilder("Caso3\\lib\\OpenSSL-1.1.1h_win32\\openssl.exe", "dhparam", "-text", "1024");
 
             Process process = processBuilder.start();
-            // Leer la salida del commando
+
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
             while (errorReader.readLine() != null) {
@@ -143,12 +143,12 @@ public class ServerIterativo extends Thread{
                     String[] parts = line.split(" ");
                     generatorNumber = Integer.parseInt(parts[9]); 
                 } else if (readingPrime) {
-                    // Extraer el valor en hexadecimal
+
                     hexPrime.append(line.trim().replace(":", ""));
                 }
             }
 
-            // Convertir el número primo en hexadecimal a BigInteger
+
             primeNumber = new BigInteger(hexPrime.toString(), 16);
             long x = Math.round(Math.random());
 
@@ -171,7 +171,7 @@ public class ServerIterativo extends Thread{
             byte[] firmaBytes = signature.sign();
             String firmaBase64 = Base64.getEncoder().encodeToString(firmaBytes);
 
-            // Enviar la firma en Base64
+
             escritor.println(firmaBase64);
 
             if (lector.readLine().equals("OK")) {
@@ -215,7 +215,7 @@ public class ServerIterativo extends Thread{
             String uid = lector.readLine();
             String hmac_uid = lector.readLine();
 
-            // Verificar HMAC del usuario
+
             byte[] uidDecoded64 = Base64.getDecoder().decode(uid);
             Cipher cipherSimetricaUID = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipherSimetricaUID.init(Cipher.DECRYPT_MODE, K_AB1, iv);
@@ -228,7 +228,7 @@ public class ServerIterativo extends Thread{
             String paquete_id = lector.readLine();
             String hmac_paquete = lector.readLine();
 
-            // Verificar HMAC del paquete
+
             byte[] paqueteIdDecoded64 = Base64.getDecoder().decode(paquete_id);
             Cipher cipherSimetrica = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipherSimetrica.init(Cipher.DECRYPT_MODE, K_AB1, iv);
@@ -262,7 +262,6 @@ public class ServerIterativo extends Thread{
             mac.init(K_AB2);
             byte[] hmacEstadoRespuesta = mac.doFinal(estadoRespuesta.toString().getBytes());
             String hmacEstadoRespuestaBase64 = Base64.getEncoder().encodeToString(hmacEstadoRespuesta);
-
             escritor.println(estadoRespuestaCifrado);
             escritor.println(hmacEstadoRespuestaBase64);
 
@@ -273,7 +272,7 @@ public class ServerIterativo extends Thread{
                 return;
             }
 
-            // Terminar la conexión
+
             if (lector.readLine().equals("TERMINAR")){
                 System.out.println("Conexión terminada");
             }
@@ -290,5 +289,18 @@ public class ServerIterativo extends Thread{
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public static String cipherMensajeAsimetrico(String estadoRespuesta, PublicKey clavePublica, byte[] claveSecreta) throws Exception {
+        Cipher cipherAsimetrico = Cipher.getInstance("RSA");
+        cipherAsimetrico.init(Cipher.ENCRYPT_MODE, clavePublica);
+        byte[] mensajeCifrado = cipherAsimetrico.doFinal(estadoRespuesta.getBytes());
+        String estadoRespuestaCifrado = Base64.getEncoder().encodeToString(mensajeCifrado);
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec keySpec = new SecretKeySpec(claveSecreta, "HmacSHA256");
+        mac.init(keySpec);
+        byte[] hmacEstadoRespuesta = mac.doFinal(estadoRespuestaCifrado.getBytes());
+        String hmacEstadoRespuestaBase64 = Base64.getEncoder().encodeToString(hmacEstadoRespuesta);
+        return hmacEstadoRespuestaBase64;
     }
 }
