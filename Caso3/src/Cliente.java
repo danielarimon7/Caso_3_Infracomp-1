@@ -8,12 +8,6 @@ import java.math.BigInteger;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.PublicKey;
-import javax.crypto.Cipher;
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.util.ArrayList;
@@ -21,10 +15,13 @@ import java.util.Base64;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import javax.crypto.Cipher;
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
-//TODO menú
 
-//TODO los prints deberían incluir el paso del protocolo
 public class Cliente extends Thread{
     public static final int PUERTO = 3400;
 	public static final String SERVIDOR = "localhost";
@@ -50,9 +47,6 @@ public class Cliente extends Thread{
         ArrayList<Integer> idCliente = new ArrayList<>();
         ArrayList<Integer> paquetes = new ArrayList<>();
 
-        //TODO no debería ser un poquito más random? Comentario dice 32
-
-        // Predefinir 32 paquetes con estados iniciales
         for (int i = 1; i <= 40; i++) {
             idCliente.add(i);
             paquetes.add(i+i);
@@ -62,15 +56,12 @@ public class Cliente extends Thread{
 		PublicKey publicKey = null;
         for (int consultas = 0; consultas < numeroConsultas;  consultas++) {
 		    try {
-                //TODO todos están accediendo al mismo archivo
                 socket = new Socket(SERVIDOR, PUERTO);
                 escritor = new PrintWriter(socket.getOutputStream(), true);
                 lector = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                //TODO pasarle el id al otro para impresiones
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(PUBLIC_KEY_FILE));
                 publicKey = (PublicKey) ois.readObject();
                 System.out.println("Llave pública leída exitosamente.");
-
                 escritor.println("SECINIT");
                 String mensaje = generarCadena(16);
                 String encodedMessage = cifrar(publicKey, mensaje, "RSA");

@@ -3,7 +3,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
 public class ServidorConcurrente extends Thread{
@@ -30,13 +29,9 @@ public class ServidorConcurrente extends Thread{
             ss = new ServerSocket(PUERTO);
             System.out.println("Servidor escuchando en el puerto " + PUERTO);
 
-            //Barrera para que el servidor concurrente solo termine cuando terminen los delegados
             barrierServidor = new CyclicBarrier(numeroClientes+1);
-            // Esperar conexiones y crear delegados
             for(int i = 0; i < numeroClientes; i++) {
                 Socket socket = ss.accept();
-                //TODO no debería incluir el id del servidor delegado?
-                //TODO hacer que el cliente le pase al id el numero de proceso
                 ServidorDelegado servidor = new ServidorDelegado(idClientes, paquetes, socket, barrierServidor);
                 servidor.start();
             }
